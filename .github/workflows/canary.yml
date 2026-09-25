@@ -1,0 +1,58 @@
+name: Next.js Canary
+
+# Next.js changes its cache handler interfaces between minor releases, so the
+# handlers are checked against the next one before it ships.
+on:
+  schedule:
+    - cron: "23 3 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    name: End-to-End Tests (next@canary)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup / Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup / pnpm
+        uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024 # v3.0.0
+        with:
+          cache: true
+          require-lockfile: true
+
+      # Moves every workspace package on `next`, the library's devDependency
+      # included, so a single copy of Next.js is installed. pnpm's minimum
+      # release age still applies, so this picks the newest canary that has
+      # been out for a day rather than one published minutes ago.
+      - name: Setup / Next.js canary
+        run: |
+          pnpm update --recursive next@canary
+          echo "Next.js $(pnpm --filter @publira/next-cache-handlers-example exec next --version)" >> "$GITHUB_STEP_SUMMARY"
+
+      # Valkey on 6379 and Redis on 6380, from the same compose.yaml the
+      # Dev Container and local runs use.
+      - name: Setup / Valkey and Redis
+        run: docker compose up --detach --wait
+
+      - name: Validate / Type Check
+        run: pnpm typecheck
+
+      - name: Validate / End-to-end against Valkey
+        run: pnpm test:e2e
+        env:
+          PNCH_REDIS_URL: redis://localhost:6379
+
+      - name: Validate / End-to-end against Redis
+        run: pnpm test:e2e
+        env:
+          PNCH_REDIS_URL: redis://localhost:6380

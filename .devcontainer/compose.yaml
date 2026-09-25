@@ -1,0 +1,53 @@
+# Dev Container overlay on the repository-root `compose.yaml`.
+#
+# `dockerComposeFile` in devcontainer.json passes both files, root first, so
+# the `app` container the editor attaches to joins the Valkey and Redis
+# services defined there. Relative paths resolve against the directory of the
+# first compose file — the repository root, not `.devcontainer/`.
+
+services:
+  # The app container reaches both servers by service name, so they publish
+  # nothing on the host, where 6379 may already be taken.
+  valkey:
+    ports: !reset []
+
+  redis:
+    ports: !reset []
+
+  app:
+    init: true
+    image: ghcr.io/publira/base-images/publira-dev:2026.09.25@sha256:894bb8af4195207e78e50f524c9ca86d10f20476579ae2d00c24cf05b7386b44
+    command: sleep infinity
+    volumes:
+      - ..:/workspaces:cached
+      # Keep agent logins and local state across rebuilds.
+      - claude-data:/home/vscode/.claude
+      - codex-data:/home/vscode/.codex
+      - gemini-data:/home/vscode/.gemini
+      - gh-config:/home/vscode/.config/gh
+      - grok-config:/home/vscode/.grok
+      # The whole configuration of the inner Docker daemon: the
+      # docker-in-docker feature starts `dockerd` with flags only and never
+      # writes this file. Docker Hub pulls go to Google's cache first, so only
+      # an image missing from it counts against the anonymous rate limit.
+      - ./.devcontainer/daemon.json:/etc/docker/daemon.json:ro
+    depends_on:
+      valkey:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      # .claude.json (OAuth account, project trust) lives outside ~/.claude by
+      # default; point it at the persisted volume so rebuilds don't force
+      # re-auth. https://code.claude.com/docs/en/devcontainer
+      CLAUDE_CONFIG_DIR: /home/vscode/.claude
+      # `pnpm test` and `pnpm test:e2e` run against Valkey. Point this at
+      # redis://redis:6379 to run them against Redis instead.
+      PNCH_REDIS_URL: redis://valkey:6379
+
+volumes:
+  claude-data:
+  codex-data:
+  gemini-data:
+  gh-config:
+  grok-config:

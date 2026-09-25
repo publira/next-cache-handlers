@@ -1,0 +1,20 @@
+{
+  "name": "@publira/next-cache-handlers-e2e",
+  "version": "0.0.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "type": "module",
+  "imports": {
+    "#helpers/*": "./helpers/*.ts"
+  },
+  "scripts": {
+    "test:e2e": "playwright test",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0",
+    "@publira/next-cache-handlers-example": "workspace:*",
+    "@types/node": "24.13.6",
+    "typescript": "6.0.3"
+  }
+}
