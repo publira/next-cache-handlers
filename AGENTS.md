@@ -75,7 +75,7 @@ Git matches the trailer token case-insensitively, so `Co-authored-by:` and `Co-A
 
 ## CI and release
 
-`.github/workflows/ci.yml` runs lint, type check, test, end-to-end, and build as separate jobs. The test and end-to-end jobs start Valkey and Redis with `docker compose up` and run their suite once against each.
+`.github/workflows/ci.yml` runs lint, type check, test, end-to-end, and build as separate jobs, on pull requests, on the merge groups the merge queue on `main` builds, and on pushes to `main`. The test and end-to-end jobs start Valkey and Redis with `docker compose up` and run their suite once against each.
 
 `.github/workflows/canary.yml` runs the type check and the end-to-end tests every day against `next@canary`, so a change to the cache handler interfaces shows up before it reaches a release. It moves `next` in the workspace to canary on the runner only; the pinned version in the repository stays as it is.
 
