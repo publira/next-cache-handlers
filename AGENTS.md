@@ -79,6 +79,8 @@ Git matches the trailer token case-insensitively, so `Co-authored-by:` and `Co-A
 
 `.github/workflows/canary.yml` runs the type check and the end-to-end tests every day against `next@canary`, so a change to the cache handler interfaces shows up before it reaches a release. It moves `next` in the workspace to canary on the runner only; the pinned version in the repository stays as it is.
 
+Every job sets `timeout-minutes` with ample headroom over its usual duration, so a hung job fails within minutes instead of holding a runner until the 6-hour default. Give a new job one as well.
+
 `.github/workflows/release.yml` runs release-please on every push to `main`. It keeps a release pull request open that bumps the version in the root `package.json`, which is the repository's version, and in `.release-please-manifest.json`, sets every `packages/*/package.json` to it, and updates the root `CHANGELOG.md`. Merging that pull request tags the release as `vX.Y.Z`, creates the GitHub Release, and publishes every package that is not private to npm through trusted publishing (OIDC), without an npm token. Do not bump a version or edit `CHANGELOG.md` by hand.
 
 Every release bumps and publishes every package under `packages/`, changed or not. A new package there joins the next release on its own; start it at the current version, and set up trusted publishing for it on npm before that release, or its publish fails.
