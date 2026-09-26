@@ -18,6 +18,9 @@ const startInstance = (baseURL: string) => ({
     PNCH_CACHE_APP: process.env.E2E_CACHE_APP ?? "",
     PNCH_REVALIDATE_TOKEN: REVALIDATE_TOKEN,
   },
+  // pnpm 12.6+ runs `next start` in its own process group, out of reach of
+  // Playwright's SIGKILL, but it forwards SIGTERM.
+  gracefulShutdown: { signal: "SIGTERM" as const, timeout: 5000 },
   // An instance already on the port may use another Redis or key prefix, and
   // the tests would then pass or fail for the wrong reason.
   reuseExistingServer: false,
