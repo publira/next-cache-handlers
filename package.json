@@ -15,8 +15,8 @@
   },
   "devDependencies": {
     "lefthook": "2.1.14",
-    "oxfmt": "0.70.0",
-    "oxlint": "1.85.0",
+    "oxfmt": "0.71.0",
+    "oxlint": "1.86.0",
     "turbo": "2.11.5",
     "typescript": "6.0.3",
     "ultracite": "7.12.1"
