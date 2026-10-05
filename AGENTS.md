@@ -34,6 +34,10 @@ The library supports both Valkey and Redis, and the integration and end-to-end t
 
 `compose.yaml` is the only place the server images are pinned: CI starts the same file. The Dev Container also has the docker-in-docker feature, for work that needs containers of its own.
 
+`compose.yaml` pins the Compose project name to `next-cache-handlers`. Renaming it orphans every volume; find them with `docker volume ls --filter label=com.docker.compose.project=<old name>`.
+
+A second checkout shares the stack unless its root `.env` sets `COMPOSE_PROJECT_NAME`.
+
 ## Library rules
 
 - Redis being down, disabled, or slow must stay a cache miss on read and a no-op on write. A cache handler that throws takes the app down with it.

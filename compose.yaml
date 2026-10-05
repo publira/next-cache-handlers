@@ -5,6 +5,9 @@
 # `docker compose up -d` starts them on the host ports below. The Dev
 # Container drops those ports in `.devcontainer/compose.yaml` and reaches the
 # services by name instead.
+#
+# Pinned so the volumes survive a moved checkout. Renaming orphans them.
+name: next-cache-handlers
 
 services:
   valkey:
