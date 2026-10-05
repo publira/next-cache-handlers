@@ -6,11 +6,7 @@
 # Container drops those ports in `.devcontainer/compose.yaml` and reaches the
 # services by name instead.
 #
-# The project name is pinned rather than derived from the directory of the
-# first compose file, so a moved checkout or a new compose file layout keeps
-# the same containers and named volumes, including the Dev Container's.
-# Renaming it orphans every one of them. `COMPOSE_PROJECT_NAME` still takes
-# precedence, for a second checkout that needs a stack of its own.
+# Pinned so the volumes survive a moved checkout. Renaming orphans them.
 name: next-cache-handlers
 
 services:
