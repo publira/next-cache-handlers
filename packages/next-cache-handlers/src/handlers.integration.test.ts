@@ -461,4 +461,80 @@ describe("Redis handlers integration", () => {
     expect(await evalHandler.get(evalNewKey, { kind: "IMAGE" })).not.toBeNull();
     expect(await control.sMembers(evalTagKeys)).toContain(evalNewKey);
   });
+
+  it("incremental handler drops a value rendered across a revalidation of its tag", async ({
+    onTestFinished,
+    skip,
+  }) => {
+    if (!available) {
+      skip();
+    }
+
+    vi.useFakeTimers({ toFake: ["Date"] });
+    onTestFinished(() => {
+      vi.useRealTimers();
+    });
+
+    const handler = new RedisIncrementalCacheHandler(
+      { _requestHeaders: {}, revalidatedTags: [] },
+      { keyPrefix, redisUrl }
+    );
+    const tag = "tenant:t1:render-across";
+    const cacheKey = "page-render-across";
+
+    // Next.js looks the key up, misses, and renders from the data as it is.
+    vi.setSystemTime(1_000_000);
+    expect(await handler.get(cacheKey, { kind: "APP_PAGE" })).toBeNull();
+
+    // The data changes and its tag is revalidated while that render runs.
+    vi.setSystemTime(1_000_100);
+    await handler.revalidateTag(tag);
+    handler.resetRequestCache();
+
+    // The render finishes with what it read before the change. Written, it
+    // would be newer than the revalidation and pass for the changed data.
+    vi.setSystemTime(1_000_200);
+    await handler.set(cacheKey, imageData("rendered-before"), { tags: [tag] });
+    expect(await handler.get(cacheKey, { kind: "IMAGE" })).toBeNull();
+
+    // That lookup starts a render after the revalidation, which is kept.
+    vi.setSystemTime(1_000_300);
+    await handler.set(cacheKey, imageData("rendered-after"), { tags: [tag] });
+    const hit = await handler.get(cacheKey, { kind: "IMAGE" });
+    expect((hit?.value as { etag?: string } | undefined)?.etag).toBe(
+      "rendered-after"
+    );
+  });
+
+  it("incremental handler keeps a value looked up after its tag was revalidated", async ({
+    onTestFinished,
+    skip,
+  }) => {
+    if (!available) {
+      skip();
+    }
+
+    vi.useFakeTimers({ toFake: ["Date"] });
+    onTestFinished(() => {
+      vi.useRealTimers();
+    });
+
+    const handler = new RedisIncrementalCacheHandler(
+      { _requestHeaders: {}, revalidatedTags: [] },
+      { keyPrefix, redisUrl }
+    );
+    const tag = "tenant:t1:render-after";
+    const cacheKey = "page-render-after";
+
+    vi.setSystemTime(2_000_000);
+    await handler.revalidateTag(tag);
+    handler.resetRequestCache();
+
+    vi.setSystemTime(2_000_100);
+    expect(await handler.get(cacheKey, { kind: "APP_PAGE" })).toBeNull();
+    vi.setSystemTime(2_000_200);
+    await handler.set(cacheKey, imageData("rendered"), { tags: [tag] });
+
+    expect(await handler.get(cacheKey, { kind: "IMAGE" })).not.toBeNull();
+  });
 });

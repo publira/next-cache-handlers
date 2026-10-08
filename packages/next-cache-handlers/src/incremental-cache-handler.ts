@@ -84,6 +84,74 @@ end
 return n
 `;
 
+/**
+ * KEYS[1] = value key, KEYS[2..n+1] = tag timestamp keys, KEYS[n+2..2n+1] =
+ * tag key-set keys. ARGV[1] = when the key was looked up (empty when no lookup
+ * was seen), ARGV[2] = payload, ARGV[3] = TTL in seconds, ARGV[4] = cache key.
+ *
+ * Writes nothing and answers 0 when one of the tags was revalidated at or
+ * after the lookup. Checked in the same EVAL as the write, so a revalidation
+ * either lands before the check and stops the write, or after the SADD and
+ * deletes what was written.
+ */
+const SET_SCRIPT = `
+local n = math.floor((#KEYS - 1) / 2)
+local looked_up_at = tonumber(ARGV[1])
+if looked_up_at then
+  for i = 1, n do
+    local revalidated_at = tonumber(redis.call('GET', KEYS[1 + i]))
+    if revalidated_at and revalidated_at >= looked_up_at then
+      return 0
+    end
+  end
+end
+redis.call('SET', KEYS[1], ARGV[2], 'EX', ARGV[3])
+for i = 1, n do
+  redis.call('SADD', KEYS[1 + n + i], ARGV[4])
+end
+return 1
+`;
+
+/**
+ * When each value key was first looked up since it was last written, in ms.
+ *
+ * Next.js regenerates a page or a route only after `get` has answered for its
+ * key, and a value written by `set` is what that render read from the data
+ * sources by then. A render that began before `revalidateTag` and finishes
+ * after it would otherwise be written once the revalidation has already
+ * deleted every member of the tag, carrying a `lastModified` later than the
+ * revalidation, and be served as fresh until its own revalidate period runs
+ * out. The lookup is the latest moment the render can have started, so it is
+ * what `set` compares the tags against.
+ *
+ * Module scope, because Next.js constructs a handler for every request while
+ * the render it starts may write through another one. A key with no recorded
+ * lookup is written the way it always was.
+ */
+const lookedUpAt = new Map<string, number>();
+
+/** Enough for every page a process renders at once; the oldest goes first. */
+const MAX_TRACKED_LOOKUPS = 10_000;
+
+const recordLookup = (key: string, now: number): void => {
+  if (lookedUpAt.has(key)) {
+    return;
+  }
+  if (lookedUpAt.size >= MAX_TRACKED_LOOKUPS) {
+    const oldest = lookedUpAt.keys().next();
+    if (!oldest.done) {
+      lookedUpAt.delete(oldest.value);
+    }
+  }
+  lookedUpAt.set(key, now);
+};
+
+const takeLookup = (key: string): number | undefined => {
+  const at = lookedUpAt.get(key);
+  lookedUpAt.delete(key);
+  return at;
+};
+
 const extractTagsFromValue = (
   data: unknown,
   ctx: IncrementalSetContext
@@ -219,8 +287,11 @@ export class RedisIncrementalCacheHandler {
     cacheKey: string,
     ctx?: { kind?: string; tags?: string[]; softTags?: string[] }
   ): Promise<IncrementalCacheHandlerValue | null> {
+    const key = valueKey(this.config.keyPrefix, cacheKey);
+    recordLookup(key, Date.now());
+
     const stored = await withRedis(this.config, null, async (client) => {
-      const raw = await client.get(valueKey(this.config.keyPrefix, cacheKey));
+      const raw = await client.get(key);
       if (!raw) {
         return null;
       }
@@ -266,9 +337,12 @@ export class RedisIncrementalCacheHandler {
     data: unknown | null,
     ctx: IncrementalSetContext = {}
   ): Promise<void> {
+    const key = valueKey(this.config.keyPrefix, cacheKey);
+    const lookupAt = takeLookup(key);
+
     if (data === null) {
       await withRedis(this.config, undefined, async (client) => {
-        await client.del(valueKey(this.config.keyPrefix, cacheKey));
+        await client.del(key);
       });
       return;
     }
@@ -281,15 +355,21 @@ export class RedisIncrementalCacheHandler {
       value: data,
     };
     const ttl = resolveTtlSeconds(data, ctx, this.config);
-    const key = valueKey(this.config.keyPrefix, cacheKey);
 
     await withRedis(this.config, undefined, async (client) => {
-      const multi = client.multi();
-      multi.set(key, serializeCachePayload(stored), { EX: ttl });
-      for (const tag of tags) {
-        multi.sAdd(tagKeysKey(this.config.keyPrefix, tag), cacheKey);
-      }
-      await multi.exec();
+      await client.eval(SET_SCRIPT, {
+        arguments: [
+          lookupAt === undefined ? "" : String(lookupAt),
+          serializeCachePayload(stored),
+          String(ttl),
+          cacheKey,
+        ],
+        keys: [
+          key,
+          ...tags.map((tag) => tagTimestampKey(this.config.keyPrefix, tag)),
+          ...tags.map((tag) => tagKeysKey(this.config.keyPrefix, tag)),
+        ],
+      });
     });
   }
 
