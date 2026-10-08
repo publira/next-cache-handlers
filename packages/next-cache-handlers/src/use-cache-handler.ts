@@ -43,6 +43,7 @@ interface StoredUseCacheEntry {
   valueBase64: string;
   tags: string[];
   stale: number;
+  /** When the fill started, on the wall clock (see `wallClockOffset`). */
   timestamp: number;
   expire: number;
   revalidate: number;
@@ -57,6 +58,23 @@ interface StoredUseCacheEntry {
  * second with a 500 instead of the page.
  */
 const STALE_REVALIDATE_SECONDS = 1;
+
+/**
+ * How far the wall clock is ahead of this process's performance clock, in ms.
+ *
+ * Next.js stamps an entry with `performance.timeOrigin + performance.now()` and
+ * compares that stamp with whatever `getExpiration` returns, so those two have
+ * to reach Next.js on the performance clock. A tag revalidation is shared
+ * through Redis, though, and the performance clocks of two processes share no
+ * origin; even within one process the two clocks drift apart, and a step of the
+ * wall clock (NTP, VM time sync) moves them further at once. A performance
+ * clock running ahead would otherwise let a fill that read the data before a
+ * revalidation carry a stamp later than it, and be served as fresh for its
+ * whole `revalidate`. Everything stored in Redis is therefore on the wall
+ * clock, and this offset is taken at the moment of each conversion.
+ */
+const wallClockOffset = (): number =>
+  Date.now() - (performance.timeOrigin + performance.now());
 
 const entryKey = (prefix: string, cacheKey: string): string =>
   `${prefix}uc:v:${cacheKey}`;
@@ -244,7 +262,7 @@ export const createUseCacheHandler = (
       revalidate: isStale ? STALE_REVALIDATE_SECONDS : stored.revalidate,
       stale: stored.stale,
       tags: stored.tags,
-      timestamp: stored.timestamp,
+      timestamp: stored.timestamp - wallClockOffset(),
       value: bufferToStream(bytes),
     };
   };
@@ -272,7 +290,7 @@ export const createUseCacheHandler = (
       revalidate: entry.revalidate,
       stale: entry.stale,
       tags: entry.tags,
-      timestamp: entry.timestamp,
+      timestamp: entry.timestamp + wallClockOffset(),
       valueBase64: Buffer.from(bytes).toString("base64"),
     };
 
@@ -301,8 +319,11 @@ export const createUseCacheHandler = (
     });
   };
 
-  const getExpiration: UseCacheHandler["getExpiration"] = (tags) =>
-    Promise.resolve(maxExpiredAt(tags));
+  const getExpiration: UseCacheHandler["getExpiration"] = (tags) => {
+    const expiredAt = maxExpiredAt(tags);
+    // Zero is "never revalidated", not a moment to convert.
+    return Promise.resolve(expiredAt === 0 ? 0 : expiredAt - wallClockOffset());
+  };
 
   const updateTags: UseCacheHandler["updateTags"] = async (tags, durations) => {
     if (tags.length === 0) {
