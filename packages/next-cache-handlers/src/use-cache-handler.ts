@@ -59,6 +59,44 @@ interface StoredUseCacheEntry {
  */
 const STALE_REVALIDATE_SECONDS = 1;
 
+interface WallClockOffsetSample {
+  /** When the offset was first seen, on the performance clock. */
+  at: number;
+  offset: number;
+}
+
+/**
+ * The offsets this process has seen, oldest first, each in effect from its
+ * `at` until the next one's.
+ *
+ * Next.js calls `set` only once the fill is over, so the offset when `set`
+ * runs may not be the one in effect when the fill started: a wall clock
+ * stepped forward in between would move the fill past a revalidation that
+ * landed after it started. `set` therefore converts with the lowest offset seen
+ * since then, which can only make an entry look older. The fill is preceded by
+ * the `get` that missed, which is what records the offset before it.
+ *
+ * A reading is kept only when it moved by a millisecond or more: `Date.now()`
+ * has no finer resolution, so anything less is not a change. Readings older
+ * than `WALL_CLOCK_OFFSET_HISTORY_MS` are dropped, except the last one before
+ * it, which is still in effect.
+ */
+const offsetHistory: WallClockOffsetSample[] = [];
+
+/** How long a fill may run and still be converted with the offset it started under. */
+const WALL_CLOCK_OFFSET_HISTORY_MS = 60 * 60 * 1000;
+
+const recordWallClockOffset = (at: number, offset: number): void => {
+  const last = offsetHistory.at(-1);
+  if (last === undefined || Math.abs(offset - last.offset) >= 1) {
+    offsetHistory.push({ at, offset });
+  }
+  const horizon = at - WALL_CLOCK_OFFSET_HISTORY_MS;
+  while ((offsetHistory[1]?.at ?? Number.POSITIVE_INFINITY) <= horizon) {
+    offsetHistory.shift();
+  }
+};
+
 /**
  * How far the wall clock is ahead of this process's performance clock, in ms.
  *
@@ -72,9 +110,27 @@ const STALE_REVALIDATE_SECONDS = 1;
  * revalidation carry a stamp later than it, and be served as fresh for its
  * whole `revalidate`. Everything stored in Redis is therefore on the wall
  * clock, and this offset is taken at the moment of each conversion.
+ *
+ * Every reading is also kept in `offsetHistory`, for `set`.
  */
-const wallClockOffset = (): number =>
-  Date.now() - (performance.timeOrigin + performance.now());
+const wallClockOffset = (): number => {
+  const at = performance.timeOrigin + performance.now();
+  const offset = Date.now() - at;
+  recordWallClockOffset(at, offset);
+  return offset;
+};
+
+/** The lowest offset in effect at any point from `since` (performance clock) until now. */
+const lowestWallClockOffsetSince = (since: number): number => {
+  let lowest = wallClockOffset();
+  for (const [index, sample] of offsetHistory.entries()) {
+    const next = offsetHistory[index + 1];
+    if (next === undefined || next.at > since) {
+      lowest = Math.min(lowest, sample.offset);
+    }
+  }
+  return lowest;
+};
 
 const entryKey = (prefix: string, cacheKey: string): string =>
   `${prefix}uc:v:${cacheKey}`;
@@ -217,6 +273,9 @@ export const createUseCacheHandler = (
     });
 
   const get: UseCacheHandler["get"] = async (cacheKey, softTags) => {
+    // Read before a miss too: the fill that follows one is converted in `set`
+    // with the offset seen here.
+    const offset = wallClockOffset();
     // Only complete Redis writes are visible; in-flight sets simply miss.
     const stored = await withRedis(config, null, async (client) => {
       const raw = await client.get(entryKey(config.keyPrefix, cacheKey));
@@ -262,7 +321,7 @@ export const createUseCacheHandler = (
       revalidate: isStale ? STALE_REVALIDATE_SECONDS : stored.revalidate,
       stale: stored.stale,
       tags: stored.tags,
-      timestamp: stored.timestamp - wallClockOffset(),
+      timestamp: stored.timestamp - offset,
       value: bufferToStream(bytes),
     };
   };
@@ -290,7 +349,7 @@ export const createUseCacheHandler = (
       revalidate: entry.revalidate,
       stale: entry.stale,
       tags: entry.tags,
-      timestamp: entry.timestamp + wallClockOffset(),
+      timestamp: entry.timestamp + lowestWallClockOffsetSince(entry.timestamp),
       valueBase64: Buffer.from(bytes).toString("base64"),
     };
 

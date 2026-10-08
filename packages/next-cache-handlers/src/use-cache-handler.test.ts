@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createUseCacheHandler } from "./use-cache-handler";
 import type { UseCacheEntry } from "./use-cache-handler";
 
 const { store } = vi.hoisted(() => ({
@@ -64,6 +63,18 @@ const skewPerformanceClock = (skewMs: number): void => {
 
 const performanceNow = (): number => timeOrigin + performance.now();
 
+const year = 365 * 24 * 60 * 60;
+
+/**
+ * A handler in a process of its own: the offsets the module has seen between
+ * the two clocks are per process, so each instance loads it afresh.
+ */
+const startProcess = async () => {
+  vi.resetModules();
+  const { createUseCacheHandler } = await import("./use-cache-handler");
+  return createUseCacheHandler({ keyPrefix: "pnch:test:" });
+};
+
 const entry = (timestamp: number): UseCacheEntry => ({
   expire: 3600,
   revalidate: 900,
@@ -93,13 +104,14 @@ afterEach(() => {
 describe("use-cache handler clocks", () => {
   it("reports a fill that started before a revalidation as stale when the performance clock runs ahead", async () => {
     skewPerformanceClock(50);
-    const handler = createUseCacheHandler({ keyPrefix: "pnch:test:" });
+    const handler = await startProcess();
 
-    // The fill reads the data, and only then is the tag revalidated: on the
-    // performance clock the fill still looks later than the revalidation.
+    // The lookup misses and the fill reads the data, and only then is the tag
+    // revalidated: on the performance clock the fill still looks later.
+    expect(await handler.get("key", [])).toBeUndefined();
     const fillStartedAt = performanceNow();
     vi.setSystemTime(start + 10);
-    await handler.updateTags([tag], { expire: 365 * 24 * 60 * 60 });
+    await handler.updateTags([tag], { expire: year });
     vi.setSystemTime(start + 20);
     await handler.set("key", Promise.resolve(entry(fillStartedAt)));
 
@@ -110,10 +122,11 @@ describe("use-cache handler clocks", () => {
 
   it("reports a fill that started after a revalidation as fresh when the performance clock runs behind", async () => {
     skewPerformanceClock(-50);
-    const handler = createUseCacheHandler({ keyPrefix: "pnch:test:" });
+    const handler = await startProcess();
 
-    await handler.updateTags([tag], { expire: 365 * 24 * 60 * 60 });
+    await handler.updateTags([tag], { expire: year });
     vi.setSystemTime(start + 10);
+    expect(await handler.get("key", [])).toBeUndefined();
     const fillStartedAt = performanceNow();
     vi.setSystemTime(start + 20);
     await handler.set("key", Promise.resolve(entry(fillStartedAt)));
@@ -123,16 +136,36 @@ describe("use-cache handler clocks", () => {
     expect(hit?.revalidate).toBe(900);
   });
 
+  it("reports a fill that started before a revalidation as stale when the wall clock steps forward before it is written", async () => {
+    skewPerformanceClock(0);
+    const handler = await startProcess();
+
+    expect(await handler.get("key", [])).toBeUndefined();
+    const fillStartedAt = performanceNow();
+    vi.setSystemTime(start + 10);
+    await handler.updateTags([tag], { expire: year });
+
+    // The wall clock jumps a second ahead while the fill is still running.
+    vi.restoreAllMocks();
+    skewPerformanceClock(-1000);
+    vi.setSystemTime(start + 1020);
+    await handler.set("key", Promise.resolve(entry(fillStartedAt)));
+
+    vi.setSystemTime(start + 1030);
+    const hit = await handler.get("key", []);
+    expect(hit?.revalidate).toBe(1);
+  });
+
   it("compares a revalidation from another instance on the wall clock both share", async () => {
     skewPerformanceClock(-50);
-    const writer = createUseCacheHandler({ keyPrefix: "pnch:test:" });
-    await writer.updateTags([tag], { expire: 365 * 24 * 60 * 60 });
+    const writer = await startProcess();
+    await writer.updateTags([tag], { expire: year });
     vi.setSystemTime(start + 10);
     await writer.set("key", Promise.resolve(entry(performanceNow())));
 
     vi.restoreAllMocks();
     skewPerformanceClock(50);
-    const reader = createUseCacheHandler({ keyPrefix: "pnch:test:" });
+    const reader = await startProcess();
     await reader.refreshTags();
     vi.setSystemTime(start + 20);
     const hit = await reader.get("key", []);
@@ -141,7 +174,7 @@ describe("use-cache handler clocks", () => {
 
   it("hands Next.js the entry timestamp and the tag expiration on its performance clock", async () => {
     skewPerformanceClock(50);
-    const handler = createUseCacheHandler({ keyPrefix: "pnch:test:" });
+    const handler = await startProcess();
 
     expect(await handler.getExpiration([tag])).toBe(0);
 
