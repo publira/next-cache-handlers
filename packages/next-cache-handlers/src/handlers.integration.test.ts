@@ -506,6 +506,48 @@ describe("Redis handlers integration", () => {
     );
   });
 
+  it("incremental handler keeps a value rendered after a revalidation deleted a value it had served", async ({
+    onTestFinished,
+    skip,
+  }) => {
+    if (!available) {
+      skip();
+    }
+
+    vi.useFakeTimers({ toFake: ["Date"] });
+    onTestFinished(() => {
+      vi.useRealTimers();
+    });
+
+    const handler = new RedisIncrementalCacheHandler(
+      { _requestHeaders: {}, revalidatedTags: [] },
+      { keyPrefix, redisUrl }
+    );
+    const tag = "tenant:t1:render-after-hit";
+    const cacheKey = "page-render-after-hit";
+
+    vi.setSystemTime(3_000_000);
+    await handler.set(cacheKey, imageData("first"), { tags: [tag] });
+
+    // A hit starts no render, so it leaves nothing for a later write to be
+    // compared against.
+    vi.setSystemTime(3_000_100);
+    expect(await handler.get(cacheKey, { kind: "IMAGE" })).not.toBeNull();
+
+    vi.setSystemTime(3_000_200);
+    await handler.revalidateTag(tag);
+    handler.resetRequestCache();
+
+    // The miss after the revalidation is what starts the render.
+    vi.setSystemTime(3_000_300);
+    expect(await handler.get(cacheKey, { kind: "IMAGE" })).toBeNull();
+    vi.setSystemTime(3_000_400);
+    await handler.set(cacheKey, imageData("second"), { tags: [tag] });
+
+    const hit = await handler.get(cacheKey, { kind: "IMAGE" });
+    expect((hit?.value as { etag?: string } | undefined)?.etag).toBe("second");
+  });
+
   it("incremental handler keeps a value looked up after its tag was revalidated", async ({
     onTestFinished,
     skip,

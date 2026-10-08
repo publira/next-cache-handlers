@@ -86,11 +86,11 @@ return n
 
 /**
  * KEYS[1] = value key, KEYS[2..n+1] = tag timestamp keys, KEYS[n+2..2n+1] =
- * tag key-set keys. ARGV[1] = when the key was looked up (empty when no lookup
- * was seen), ARGV[2] = payload, ARGV[3] = TTL in seconds, ARGV[4] = cache key.
+ * tag key-set keys. ARGV[1] = when the key missed (empty when no miss was
+ * seen), ARGV[2] = payload, ARGV[3] = TTL in seconds, ARGV[4] = cache key.
  *
  * Writes nothing and answers 0 when one of the tags was revalidated at or
- * after the lookup. Checked in the same EVAL as the write, so a revalidation
+ * after the miss. Checked in the same EVAL as the write, so a revalidation
  * either lands before the check and stops the write, or after the SADD and
  * deletes what was written.
  */
@@ -113,7 +113,7 @@ return 1
 `;
 
 /**
- * When each value key was first looked up since it was last written, in ms.
+ * When each value key first missed since it was last written, in ms.
  *
  * Next.js regenerates a page or a route only after `get` has answered for its
  * key, and a value written by `set` is what that render read from the data
@@ -121,12 +121,20 @@ return 1
  * after it would otherwise be written once the revalidation has already
  * deleted every member of the tag, carrying a `lastModified` later than the
  * revalidation, and be served as fresh until its own revalidate period runs
- * out. The lookup is the latest moment the render can have started, so it is
+ * out. The miss is the latest moment the render can have started, so it is
  * what `set` compares the tags against.
+ *
+ * Only a miss is recorded. A hit starts no render here: Next.js regenerates a
+ * hit once it is past its revalidate period, and the value's TTL in Redis is
+ * that period, so by then the lookup is a miss. A hit recorded anyway would
+ * outlive a revalidation that deleted the value, and the miss after it would
+ * then compare a render started after the revalidation against a lookup
+ * before it, and refuse to store it. The first miss is kept rather than the
+ * latest, because a later one joins the render the first one started.
  *
  * Module scope, because Next.js constructs a handler for every request while
  * the render it starts may write through another one. A key with no recorded
- * lookup is written the way it always was.
+ * miss is written the way it always was.
  */
 const lookedUpAt = new Map<string, number>();
 
@@ -288,7 +296,11 @@ export class RedisIncrementalCacheHandler {
     ctx?: { kind?: string; tags?: string[]; softTags?: string[] }
   ): Promise<IncrementalCacheHandlerValue | null> {
     const key = valueKey(this.config.keyPrefix, cacheKey);
-    recordLookup(key, Date.now());
+    const lookupAt = Date.now();
+    const miss = (): null => {
+      recordLookup(key, lookupAt);
+      return null;
+    };
 
     const stored = await withRedis(this.config, null, async (client) => {
       const raw = await client.get(key);
@@ -299,7 +311,7 @@ export class RedisIncrementalCacheHandler {
     });
 
     if (!stored) {
-      return null;
+      return miss();
     }
 
     const combined = [
@@ -311,7 +323,7 @@ export class RedisIncrementalCacheHandler {
     ];
 
     if (combined.some((tag) => this.revalidatedTags.has(tag))) {
-      return null;
+      return miss();
     }
 
     const missing = combined.filter((tag) => !this.localTagTimestamps.has(tag));
@@ -322,7 +334,7 @@ export class RedisIncrementalCacheHandler {
     if (
       areTagsExpired(combined, stored.lastModified, this.localTagTimestamps)
     ) {
-      return null;
+      return miss();
     }
 
     return {
