@@ -27,7 +27,7 @@ jobs:
           persist-credentials: false
 
       - name: Setup / pnpm
-        uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024 # v3.0.0
+        uses: pnpm/setup@f618924e009e490c5badb81bc821e794d0ced591 # v3.1.0
         with:
           cache: true
           require-lockfile: true
@@ -46,7 +46,7 @@ jobs:
           persist-credentials: false
 
       - name: Setup / pnpm
-        uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024 # v3.0.0
+        uses: pnpm/setup@f618924e009e490c5badb81bc821e794d0ced591 # v3.1.0
         with:
           cache: true
           require-lockfile: true
@@ -65,7 +65,7 @@ jobs:
           persist-credentials: false
 
       - name: Setup / pnpm
-        uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024 # v3.0.0
+        uses: pnpm/setup@f618924e009e490c5badb81bc821e794d0ced591 # v3.1.0
         with:
           cache: true
           require-lockfile: true
@@ -98,7 +98,7 @@ jobs:
           persist-credentials: false
 
       - name: Setup / pnpm
-        uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024 # v3.0.0
+        uses: pnpm/setup@f618924e009e490c5badb81bc821e794d0ced591 # v3.1.0
         with:
           cache: true
           require-lockfile: true
@@ -129,7 +129,7 @@ jobs:
           persist-credentials: false
 
       - name: Setup / pnpm
-        uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024 # v3.0.0
+        uses: pnpm/setup@f618924e009e490c5badb81bc821e794d0ced591 # v3.1.0
         with:
           cache: true
           require-lockfile: true
