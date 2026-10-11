@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.3](https://github.com/publira/next-cache-handlers/compare/v1.0.2...v1.0.3) (2026-10-11)
+
+
+### Bug Fixes
+
+* **deps:** update dependency next to v16.4.0 ([#77](https://github.com/publira/next-cache-handlers/issues/77)) ([323bcc5](https://github.com/publira/next-cache-handlers/commit/323bcc500feda3dd1920ef050f21528b0a39a07a))
+
 ## [1.0.2](https://github.com/publira/next-cache-handlers/compare/v1.0.1...v1.0.2) (2026-10-08)
 
 
