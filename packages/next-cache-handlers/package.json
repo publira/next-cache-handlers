@@ -60,7 +60,7 @@
     "next": "16.4.0",
     "tsdown": "0.23.1",
     "typescript": "6.0.3",
-    "vitest": "5.0.3"
+    "vitest": "5.0.4"
   },
   "peerDependencies": {
     "next": "^16.3.0"
