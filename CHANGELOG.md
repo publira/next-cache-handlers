@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.0.3](https://github.com/publira/next-cache-handlers/compare/v1.0.2...v1.0.3) (2026-10-17)
+
+
+### Bug Fixes
+
+* **deps:** update dependency next to v16.4.0 ([#77](https://github.com/publira/next-cache-handlers/issues/77)) ([323bcc5](https://github.com/publira/next-cache-handlers/commit/323bcc500feda3dd1920ef050f21528b0a39a07a))
+* **deps:** update dependency zod to v4.6.6 ([#101](https://github.com/publira/next-cache-handlers/issues/101)) ([4215fb0](https://github.com/publira/next-cache-handlers/commit/4215fb0e764f1e0bae05cb10b1f97d7a18fa1e53))
+* **deps:** update dependency zod to v4.6.7 ([#105](https://github.com/publira/next-cache-handlers/issues/105)) ([69214b8](https://github.com/publira/next-cache-handlers/commit/69214b85aa3913895151d6e038b67c1ba154c106))
+
 ## [1.0.2](https://github.com/publira/next-cache-handlers/compare/v1.0.1...v1.0.2) (2026-10-08)
 
 
