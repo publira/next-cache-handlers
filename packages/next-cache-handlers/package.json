@@ -1,6 +1,6 @@
 {
   "name": "@publira/next-cache-handlers",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Redis-backed Next.js cacheHandler and cacheHandlers for self-hosted, multi-instance deployments.",
   "keywords": [
     "cache",
