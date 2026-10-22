@@ -5,6 +5,7 @@
   "packages": {
     ".": {
       "release-type": "node",
+      "exclude-paths": ["apps", "e2e"],
       "extra-files": [
         {
           "type": "json",

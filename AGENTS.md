@@ -62,6 +62,8 @@ release-please reads those subjects to choose the next version. The repository h
 - `feat!:` or a `BREAKING CHANGE:` footer for a change consumers have to adapt to. It releases a major version.
 - `docs:`, `test:`, `ci:`, and `chore:` release nothing.
 
+A commit that touches only `apps/` and `e2e/` releases nothing whatever its type, because neither is published. A commit that also touches any other file, `pnpm-lock.yaml` included, still counts, which is why `.github/renovate.json5` has Renovate commit an update of those directories' dependencies as `chore(deps)`.
+
 ### AI agent trailer
 
 A commit written with an AI agent's help discloses it with an `Assisted-by:` trailer. The trailer is process disclosure, not authorship, following the Linux kernel's [Coding assistants](https://docs.kernel.org/process/coding-assistants.html) policy. The format is `Assisted-by: <AGENT_NAME>:<MODEL_VERSION>`: the tool's own name and the exact model identifier.
