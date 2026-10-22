@@ -1,15 +1,4 @@
 {
   $schema: "https://docs.renovatebot.com/renovate-schema.json",
   extends: ["github>publira/.github//renovate.json5"],
-  packageRules: [
-    // config:best-practices commits an update to `dependencies` as `fix(deps)`
-    // whichever package.json declares it, and a branch takes the highest type
-    // among its updates, so raising a dependency of a private app made
-    // release-please cut a release of the published package.
-    {
-      description: "Commit updates of the private apps and the end-to-end tests as chore, since they are never published.",
-      matchFileNames: ["apps/**", "e2e/**"],
-      semanticCommitType: "chore",
-    },
-  ],
 }

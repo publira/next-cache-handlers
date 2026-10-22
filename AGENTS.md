@@ -62,7 +62,7 @@ release-please reads those subjects to choose the next version. The repository h
 - `feat!:` or a `BREAKING CHANGE:` footer for a change consumers have to adapt to. It releases a major version.
 - `docs:`, `test:`, `ci:`, and `chore:` release nothing.
 
-A commit that touches only `apps/` and `e2e/` releases nothing whatever its type, because neither is published. A commit that also touches any other file, `pnpm-lock.yaml` included, still counts, which is why `.github/renovate.json5` has Renovate commit an update of those directories' dependencies as `chore(deps)`.
+A commit that touches only `apps/` and `e2e/` releases nothing whatever its type, because neither is published. A commit that also touches any other file, `pnpm-lock.yaml` included, still counts, which is why the organization's Renovate preset commits an update of those directories' dependencies as `chore(deps)`.
 
 ### AI agent trailer
 
