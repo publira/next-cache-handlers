@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.0.3](https://github.com/publira/next-cache-handlers/compare/v1.0.2...v1.0.3) (2026-10-22)
+
+
+### Bug Fixes
+
+* **deps:** update dependency next to v16.4.0 ([#77](https://github.com/publira/next-cache-handlers/issues/77)) ([323bcc5](https://github.com/publira/next-cache-handlers/commit/323bcc500feda3dd1920ef050f21528b0a39a07a))
+* **deps:** update dependency next to v16.4.1 ([#117](https://github.com/publira/next-cache-handlers/issues/117)) ([5444f08](https://github.com/publira/next-cache-handlers/commit/5444f081b8eab22a539d4bd005ffdc31b7ebab9f))
+* **deps:** update dependency next to v16.4.2 ([#124](https://github.com/publira/next-cache-handlers/issues/124)) ([ed0d8d9](https://github.com/publira/next-cache-handlers/commit/ed0d8d9db749e1161d45c5e92855ad55181e642f))
+* **deps:** update dependency zod to v4.6.6 ([#101](https://github.com/publira/next-cache-handlers/issues/101)) ([4215fb0](https://github.com/publira/next-cache-handlers/commit/4215fb0e764f1e0bae05cb10b1f97d7a18fa1e53))
+* **deps:** update dependency zod to v4.6.7 ([#105](https://github.com/publira/next-cache-handlers/issues/105)) ([69214b8](https://github.com/publira/next-cache-handlers/commit/69214b85aa3913895151d6e038b67c1ba154c106))
+* **deps:** update react monorepo to v19.3.1 ([#118](https://github.com/publira/next-cache-handlers/issues/118)) ([13f61c5](https://github.com/publira/next-cache-handlers/commit/13f61c57232018cec9448727aaf673a8bbeb8f2f))
+
 ## [1.0.2](https://github.com/publira/next-cache-handlers/compare/v1.0.1...v1.0.2) (2026-10-08)
 
 
