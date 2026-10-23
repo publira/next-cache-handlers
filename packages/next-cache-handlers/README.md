@@ -74,7 +74,8 @@ export const POST = async (request: Request) => {
   if (!token || request.headers.get("x-revalidate-token") !== token) {
     return Response.json({ error: "unauthorized" }, { status: 401 });
   }
-  const { tags } = await request.json().catch(() => ({}));
+  const body = await request.json().catch(() => null);
+  const tags = body?.tags;
   if (!Array.isArray(tags) || !tags.every((tag) => typeof tag === "string")) {
     return Response.json({ error: "invalid payload" }, { status: 400 });
   }
