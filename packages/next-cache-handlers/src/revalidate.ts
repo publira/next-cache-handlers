@@ -29,17 +29,29 @@ const invalidPayloadResponse = (issues: z.core.$ZodIssue[]) =>
   );
 
 /**
- * Revalidates cache tags from an internal trusted caller.
+ * Revalidates cache tags from an internal trusted caller, authenticated by a
+ * shared token in the `X-Revalidate-Token` header.
  *
- * Every web app uses this handler so its isolated `PNCH_CACHE_APP` keyspace
- * receives the same invalidation. The explicit shared token authenticates the
- * machine request; it is not a browser-facing API.
+ * With `options`, the token is `options.token` and the environment is never
+ * read. Without it, the token is `PNCH_REVALIDATE_TOKEN`.
+ *
+ * @deprecated Write the Route Handler in the app; see the README. Removed in
+ * 2.0, together with the `PNCH_REVALIDATE_TOKEN` fallback.
  */
-export const revalidateTags = async (request: Request): Promise<Response> => {
-  const token = process.env.PNCH_REVALIDATE_TOKEN?.trim();
+export const revalidateTags = async (
+  request: Request,
+  options?: { token: string | undefined }
+): Promise<Response> => {
+  const token = (
+    options ? options.token : process.env.PNCH_REVALIDATE_TOKEN
+  )?.trim();
   if (!token) {
     return Response.json(
-      { error: "PNCH_REVALIDATE_TOKEN is not configured" },
+      {
+        error: options
+          ? "revalidate token is not configured"
+          : "PNCH_REVALIDATE_TOKEN is not configured",
+      },
       { status: 500 }
     );
   }
