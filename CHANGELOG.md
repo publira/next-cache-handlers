@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.1.0](https://github.com/publira/next-cache-handlers/compare/v1.0.3...v1.1.0) (2026-10-23)
+
+
+### Features
+
+* deprecate revalidateTags and accept its token as an argument ([#146](https://github.com/publira/next-cache-handlers/issues/146)) ([65de37a](https://github.com/publira/next-cache-handlers/commit/65de37ad18e76b64524db940c06e0ed588e36249))
+
+
+### Bug Fixes
+
+* keep Redis off during next build when redisUrl is an override ([#148](https://github.com/publira/next-cache-handlers/issues/148)) ([3cebf60](https://github.com/publira/next-cache-handlers/commit/3cebf6022e7ccf3a409f6242a6e2cbda349d2926))
+
 ## [1.0.3](https://github.com/publira/next-cache-handlers/compare/v1.0.2...v1.0.3) (2026-10-22)
 
 
