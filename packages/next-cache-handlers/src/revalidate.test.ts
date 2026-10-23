@@ -63,4 +63,29 @@ describe("revalidateTags", () => {
     expect(response.status).toBe(401);
     expect(revalidateTag).not.toHaveBeenCalled();
   });
+
+  it("authenticates with the given token instead of the environment", async () => {
+    const accepted = await revalidateTags(
+      request({ tags: ["tenant:tenant-a:site"] }, "given-token"),
+      { token: "given-token" }
+    );
+    const rejected = await revalidateTags(
+      request({ tags: ["tenant:tenant-a:site"] }),
+      { token: "given-token" }
+    );
+
+    expect(accepted.status).toBe(200);
+    expect(rejected.status).toBe(401);
+    expect(revalidateTag).toHaveBeenCalledOnce();
+  });
+
+  it("does not fall back to the environment for a missing given token", async () => {
+    const response = await revalidateTags(
+      request({ tags: ["tenant:tenant-a:site"] }),
+      { token: undefined }
+    );
+
+    expect(response.status).toBe(500);
+    expect(revalidateTag).not.toHaveBeenCalled();
+  });
 });

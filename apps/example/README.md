@@ -5,7 +5,7 @@ A minimal Next.js app wired to `@publira/next-cache-handlers`. It is not publish
 - `next.config.ts` points both `cacheHandler` and `cacheHandlers` at the package.
 - `app/page.tsx` is prerendered and stored through `cacheHandler`. It renders a `"use cache"` timestamp tagged `example`.
 - `app/api/remote/route.ts` reads a `"use cache: remote"` timestamp tagged `example` on every request, through `cacheHandlers`.
-- `app/api/revalidate/route.ts` exposes `revalidateTags`.
+- `app/api/revalidate/route.ts` exposes the deprecated `revalidateTags` with the token from `REVALIDATE_TOKEN`.
 
 ## Running it
 
@@ -13,7 +13,7 @@ Build the workspace once, then start the app with a Redis-compatible server reac
 
 ```sh
 pnpm build
-PNCH_CACHE_APP=example PNCH_REVALIDATE_TOKEN=secret \
+PNCH_CACHE_APP=example REVALIDATE_TOKEN=secret \
   pnpm --filter @publira/next-cache-handlers-example start
 ```
 

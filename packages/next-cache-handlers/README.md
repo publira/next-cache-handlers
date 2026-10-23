@@ -55,22 +55,35 @@ Give each app its own `PNCH_CACHE_APP` to separate their key spaces when they sh
 | `PNCH_CACHE_APP` | The app name in the key prefix (default `next` → `pnch:{app}:`) |
 | `PNCH_CACHE_KEY_PREFIX` | Overrides the whole prefix |
 | `PNCH_REDIS_CACHE_TIMEOUT_MS` | The command timeout in ms (default `1000`) |
-| `PNCH_REVALIDATE_TOKEN` | The shared secret `revalidateTags` expects in the `X-Revalidate-Token` header. Read by the `./revalidate` handler only |
+| `PNCH_REVALIDATE_TOKEN` | **Deprecated**, removed in 2.0. The token `revalidateTags(request)` expects when none is passed |
 
 ## Other exports
 
-### `@publira/next-cache-handlers/revalidate`
+### `@publira/next-cache-handlers/revalidate` (deprecated)
 
-`revalidateTags(request)` is a Route Handler that lets another service revalidate tags over HTTP. It compares the `X-Revalidate-Token` header with `PNCH_REVALIDATE_TOKEN`, reads `{ "tags": [...] }` from the body, and calls `revalidateTag(tag, "max")` on each one, so the request reaches the app's own `PNCH_CACHE_APP` key space.
+`revalidateTags` is deprecated and will be removed in 2.0. It is a Route Handler that checks the `X-Revalidate-Token` header and calls `revalidateTag(tag, "max")` for each tag in a `{ "tags": [...] }` body. `revalidateTags(request, { token })` uses the given token; `revalidateTags(request)` falls back to `PNCH_REVALIDATE_TOKEN`, which goes away with the export.
 
-It answers `500` when the token is not configured, `401` when the header does not match, and `400` for a body that is not that shape. It is a machine-to-machine entry point, not a browser-facing API.
+To migrate, write the handler in the app:
 
 ```ts
 // app/api/revalidate/route.ts
-import { revalidateTags } from "@publira/next-cache-handlers/revalidate";
-import type { NextRequest } from "next/server";
+import { revalidateTag } from "next/cache";
 
-export const POST = (request: NextRequest) => revalidateTags(request);
+export const POST = async (request: Request) => {
+  const token = process.env.REVALIDATE_TOKEN;
+  if (!token || request.headers.get("x-revalidate-token") !== token) {
+    return Response.json({ error: "unauthorized" }, { status: 401 });
+  }
+  const body = await request.json().catch(() => null);
+  const tags = body?.tags;
+  if (!Array.isArray(tags) || !tags.every((tag) => typeof tag === "string")) {
+    return Response.json({ error: "invalid payload" }, { status: 400 });
+  }
+  for (const tag of tags) {
+    revalidateTag(tag, "max");
+  }
+  return Response.json({ tags });
+};
 ```
 
 ### `@publira/next-cache-handlers/tags`

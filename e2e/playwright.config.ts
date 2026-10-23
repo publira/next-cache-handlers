@@ -16,7 +16,7 @@ const startInstance = (baseURL: string) => ({
   cwd: workspaceRoot,
   env: {
     PNCH_CACHE_APP: process.env.E2E_CACHE_APP ?? "",
-    PNCH_REVALIDATE_TOKEN: REVALIDATE_TOKEN,
+    REVALIDATE_TOKEN,
   },
   // pnpm 12.6+ runs `next start` in its own process group, out of reach of
   // Playwright's SIGKILL, but it forwards SIGTERM.
