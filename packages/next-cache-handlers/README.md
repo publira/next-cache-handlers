@@ -81,6 +81,54 @@ export const POST = (request: NextRequest) => revalidateTags(request);
 
 The root entry exports the building blocks behind the handlers (`createUseCacheHandler`, `RedisIncrementalCacheHandler`, `resolveCacheHandlerConfig`, `checkRedisReady`, …) for an app that needs to compose its own.
 
+## Building the configuration at runtime
+
+To assemble the Redis connection at runtime instead of reading `PNCH_REDIS_URL`, build the handlers in your own modules and pass it as an override. Next.js imports these modules without bundling them, so write them as plain JavaScript.
+
+```js
+// cache-handlers/config.mjs
+const { REDIS_HOST, REDIS_PASSWORD } = process.env;
+
+export const redisUrl = `rediss://:${encodeURIComponent(REDIS_PASSWORD ?? "")}@${REDIS_HOST}:6379`;
+```
+
+```js
+// cache-handlers/use-cache.mjs
+import { createUseCacheHandler } from "@publira/next-cache-handlers";
+
+import { redisUrl } from "./config.mjs";
+
+export default createUseCacheHandler({ redisUrl });
+```
+
+```js
+// cache-handlers/incremental.mjs
+import { RedisIncrementalCacheHandler } from "@publira/next-cache-handlers";
+
+import { redisUrl } from "./config.mjs";
+
+export default class CacheHandler extends RedisIncrementalCacheHandler {
+  /** @param {import("@publira/next-cache-handlers").IncrementalCacheHandlerContext} ctx */
+  constructor(ctx) {
+    super(ctx, { redisUrl });
+  }
+}
+```
+
+```ts
+// next.config.ts
+const nextConfig: NextConfig = {
+  // ...
+  cacheHandler: import.meta.resolve("./cache-handlers/incremental.mjs"),
+  cacheHandlers: {
+    default: import.meta.resolve("./cache-handlers/use-cache.mjs"),
+    remote: import.meta.resolve("./cache-handlers/use-cache.mjs"),
+  },
+};
+```
+
+The overrides are merged over what the environment variables resolve to, which stay the defaults for every setting you do not pass. An override is used as is: unlike `PNCH_REDIS_URL`, a `redisUrl` override still connects during `next build`, and only an empty string disables it.
+
 ## Behavior on failure
 
 Redis being down, disabled, or timing out is a miss on get and a no-op on set, so the app keeps running. A shared Redis is still required for a multi-instance production deployment: without it, each instance renders on its own.
