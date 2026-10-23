@@ -140,7 +140,7 @@ const nextConfig: NextConfig = {
 };
 ```
 
-The overrides are merged over what the environment variables resolve to, which stay the defaults for every setting you do not pass. An override is used as is: unlike `PNCH_REDIS_URL`, a `redisUrl` override still connects during `next build`, and only an empty string disables it.
+The overrides are merged over what the environment variables resolve to, which stay the defaults for every setting you do not pass. An override is used as is: only an empty string disables a `redisUrl` override. Like `PNCH_REDIS_URL`, it does not connect during `next build`.
 
 ## Behavior on failure
 
