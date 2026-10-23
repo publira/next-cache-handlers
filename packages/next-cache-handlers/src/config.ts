@@ -64,11 +64,6 @@ export const resolveCacheHandlerConfig = (
     redisUrl = isRedisDisabled(trimmed) ? "" : trimmed;
   }
 
-  // Avoid connecting Redis during `next build` (can hang CI / offline builds).
-  if (isProductionBuildPhase()) {
-    redisUrl = "";
-  }
-
   const explicitPrefix = process.env.PNCH_CACHE_KEY_PREFIX?.trim();
   const app = process.env.PNCH_CACHE_APP?.trim() || "next";
   const keyPrefix = explicitPrefix
@@ -90,6 +85,10 @@ export const resolveCacheHandlerConfig = (
     timeoutMs,
     ...overrides,
   };
+  // Avoid connecting Redis during `next build` (can hang CI / offline builds).
+  if (isProductionBuildPhase()) {
+    config.redisUrl = "";
+  }
   assertNoPlaintextPassword(config.redisUrl);
   return config;
 };

@@ -37,6 +37,13 @@ describe("resolveCacheHandlerConfig", () => {
     expect(resolveCacheHandlerConfig().redisUrl).toBe("");
   });
 
+  it("disables a redis url override during production build phase", () => {
+    process.env.NEXT_PHASE = "phase-production-build";
+    expect(
+      resolveCacheHandlerConfig({ redisUrl: "redis://example:6379" }).redisUrl
+    ).toBe("");
+  });
+
   it("refuses a password over redis://", () => {
     delete process.env.NEXT_PHASE;
     for (const url of [
@@ -52,6 +59,7 @@ describe("resolveCacheHandlerConfig", () => {
   });
 
   it("refuses a password over redis:// passed as an override", () => {
+    delete process.env.NEXT_PHASE;
     process.env.PNCH_REDIS_URL = "disabled";
     expect(() =>
       resolveCacheHandlerConfig({ redisUrl: "redis://:secret@example:6379" })
