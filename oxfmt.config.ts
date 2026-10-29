@@ -5,6 +5,7 @@ export default defineConfig({
   ...ultracite,
   ignorePatterns: [
     ...(ultracite.ignorePatterns ?? []),
+    ".agents/skills/**",
     ".devcontainer/devcontainer-lock.json",
     "**/CHANGELOG.md",
   ],

@@ -92,3 +92,7 @@ Every job sets `timeout-minutes` with ample headroom over its usual duration, so
 Every release bumps and publishes every package under `packages/`, changed or not. A new package there joins the next release on its own; start it at the current version, and set up trusted publishing for it on npm before that release, or its publish fails.
 
 Actions are pinned to a commit SHA, with the version in a trailing comment. Keep that form so Renovate can keep updating them.
+
+## Skill packages
+
+Entries in `.agents/skills/*` listed in `skills-lock.json` are vendored: `npx skills` overwrites them, and the maintenance bot in `publira/agents` runs `npx skills update -p -y` weekly and opens a pull request when there is a diff. Do not edit them; a patch is lost at the next update. Reading them for reference is fine. When this repository's policy and a skill disagree, this file wins. `.claude/skills/*` reaches the same skills through relative symlinks.
