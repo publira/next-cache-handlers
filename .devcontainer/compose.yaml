@@ -16,7 +16,7 @@ services:
 
   app:
     init: true
-    image: ghcr.io/publira/base-images/publira-dev:2026.10.30@sha256:4dbc6b7ee68a98b42d4a3cba04867602ac0aa80932950532b4253b801cde488e
+    image: ghcr.io/publira/base-images/publira-dev:2026.10.31@sha256:9251c1199b350a3cb8cb7c696d585461e20cb72eaa6bc88fd457761d86b5c7f0
     command: sleep infinity
     volumes:
       - ..:/workspaces:cached
