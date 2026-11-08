@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.1](https://github.com/publira/next-cache-handlers/compare/v1.1.0...v1.1.1) (2026-11-08)
+
+
+### Bug Fixes
+
+* **deps:** update dependency redis to v6.3.1 ([#183](https://github.com/publira/next-cache-handlers/issues/183)) ([caa8765](https://github.com/publira/next-cache-handlers/commit/caa87650391ecf1876e9a27140c8cab4999995df))
+
 ## [1.1.0](https://github.com/publira/next-cache-handlers/compare/v1.0.3...v1.1.0) (2026-10-23)
 
 
